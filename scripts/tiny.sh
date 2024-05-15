@@ -1,4 +1,4 @@
-python qlora.py \
+CUDA_VISIBLE_DEVICES='7' python qlora.py \
     --model_name_or_path TinyLlama/TinyLlama-1.1B-Chat-v1.0 \
     --output_dir ./output/tinyllama-1b \
     --logging_steps 10 \
