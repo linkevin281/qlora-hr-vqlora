@@ -43,6 +43,7 @@ from peft import (
 from peft.tuners.lora import LoraLayer
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
+torch.autograd.set_detect_anomaly(True)
 
 def is_ipex_available():
     def get_major_and_minor_from_version(full_version):
@@ -396,7 +397,7 @@ def get_accelerate_model(args, checkpoint_dir):
                 task_type="CAUSAL_LM",
             )
             model = get_peft_model(model, config)
-
+    print(model)
     for name, module in model.named_modules():
         if isinstance(module, LoraLayer):
             if args.bf16:
