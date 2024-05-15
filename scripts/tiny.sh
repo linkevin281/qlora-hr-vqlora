@@ -1,6 +1,6 @@
-CUDA_VISIBLE_DEVICES='7' python qlora.py \
-    --model_name_or_path TinyLlama/TinyLlama-1.1B-Chat-v1.0 \
-    --output_dir ./output/tinyllama-1b \
+CUDA_VISIBLE_DEVICES='5' python qlora.py \
+    --model_name_or_path facebook/opt-350m \
+    --output_dir ./output/opt350 \
     --logging_steps 10 \
     --save_strategy steps \
     --data_seed 42 \
