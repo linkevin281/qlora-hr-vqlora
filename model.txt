@@ -22,9 +22,6 @@ PeftModelForCausalLM(
                 (hr_vqlora): ModuleList(
                   (0-2): 3 x Quantize()
                 )
-                (bns): ModuleList(
-                  (0-2): 3 x BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-                )
               )
               (k_proj): lora.Linear4bit(
                 (base_layer): Linear4bit(in_features=2048, out_features=256, bias=False)
