@@ -37,6 +37,7 @@ import evaluate
 from peft import (
     prepare_model_for_kbit_training,
     LoraConfig,
+    HRQLoraConfig,
     get_peft_model,
     PeftModel
 )
@@ -178,6 +179,14 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
     lora_r: int = field(
         default=64,
         metadata={"help": "Lora R dimension."}
+    )
+    codebook_size: int = field(
+        default=16,
+        metadata={"help": "Codebook Size"}
+    )
+    codebook_layers: int = field(
+        default=3,
+        metadata={"help": "Codebook Layers"}
     )
     lora_alpha: float = field(
         default=16,
@@ -388,7 +397,9 @@ def get_accelerate_model(args, checkpoint_dir):
         else:
             print(f'adding LoRA modules...')
             modules = find_all_linear_names(args, model)
-            config = LoraConfig(
+            config = HRQLoraConfig(
+                codebook_size=args.codebook_size,
+                codebook_layers=args.codebook_layers,
                 r=args.lora_r,
                 lora_alpha=args.lora_alpha,
                 target_modules=modules,
