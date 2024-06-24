@@ -1,7 +1,7 @@
-CUDA_VISIBLE_DEVICES='5' python qlora.py \
-    --model_name_or_path facebook/opt-350m \
-    --output_dir ./output/opt350 \
-    --logging_steps 10 \
+CUDA_VISIBLE_DEVICES='7' python qlora.py \
+    --model_name_or_path huggyllama/llama-7b \
+    --output_dir /thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/real_runs/r8_l0.001 \
+    --logging_steps 1 \
     --save_strategy steps \
     --data_seed 42 \
     --save_steps 500 \
@@ -18,7 +18,7 @@ CUDA_VISIBLE_DEVICES='5' python qlora.py \
     --do_train \
     --do_eval \
     --do_mmlu_eval \
-    --lora_r 64 \
+    --lora_r 8 \
     --lora_alpha 16 \
     --lora_modules all \
     --double_quant \
@@ -35,10 +35,11 @@ CUDA_VISIBLE_DEVICES='5' python qlora.py \
     --gradient_accumulation_steps 16 \
     --max_steps 1875 \
     --eval_steps 187 \
-    --learning_rate 0.0002 \
+    --learning_rate 0.001 \
     --adam_beta2 0.999 \
     --max_grad_norm 0.3 \
     --lora_dropout 0.1 \
     --weight_decay 0.0 \
     --seed 0 \
-    --report_to wandb
+    --report_to wandb \
+    --run_name r8_l0.001
