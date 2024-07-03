@@ -391,23 +391,23 @@ def get_accelerate_model(args, checkpoint_dir):
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
 
     if not args.full_finetune:
-        if checkpoint_dir is not None:
-            print("Loading adapters from checkpoint.")
-            model = PeftModel.from_pretrained(model, join(checkpoint_dir, 'adapter_model'), is_trainable=True)
-        else:
-            print(f'adding LoRA modules...')
-            modules = find_all_linear_names(args, model)
-            config = HRQLoraConfig(
-                codebook_size=args.codebook_size,
-                codebook_layers=args.codebook_layers,
-                r=args.lora_r,
-                lora_alpha=args.lora_alpha,
-                target_modules=modules,
-                lora_dropout=args.lora_dropout,
-                bias="none",
-                task_type="CAUSAL_LM",
-            )
-            model = get_peft_model(model, config)
+        # if checkpoint_dir is not None:
+        #     print("Loading adapters from checkpoint.")
+        #     model = PeftModel.from_pretrained(model, join(checkpoint_dir, 'adapter_model'), is_trainable=True)
+        # else:
+        print(f'adding LoRA modules...')
+        modules = find_all_linear_names(args, model)
+        config = HRQLoraConfig(
+            codebook_size=args.codebook_size,
+            codebook_layers=args.codebook_layers,
+            r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            target_modules=modules,
+            lora_dropout=args.lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, config)
     print(model)
     for name, module in model.named_modules():
         if isinstance(module, LoraLayer):
