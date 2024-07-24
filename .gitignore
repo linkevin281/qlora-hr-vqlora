@@ -1,5 +1,6 @@
 wandb/
 output/
+old/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
