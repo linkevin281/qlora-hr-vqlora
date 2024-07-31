@@ -67,9 +67,9 @@ def is_ipex_available():
         )
         return False
     return True
-    
 
-if torch.cuda.is_available():   
+
+if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
 
 logger = logging.getLogger(__name__)
@@ -188,6 +188,18 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         default=3,
         metadata={"help": "Codebook Layers"}
     )
+    quant_ema_decay: float = field(
+        default=0.99,
+        metadata={"help": "Quantization EMA decay."}
+    )
+    codebook_start: int = field(
+        default=0,
+        metadata={"help": "Codebook start step."}
+    )
+    eval_step_zero: int = field(
+        default=0,
+        metadata={"help": "Evaluate at step 0."}
+    )
     lora_alpha: float = field(
         default=16,
         metadata={"help": " Lora alpha."}
@@ -302,7 +314,7 @@ def get_accelerate_model(args, checkpoint_dir):
         n_gpus = torch.cuda.device_count()
     if is_ipex_available() and torch.xpu.is_available():
         n_gpus = torch.xpu.device_count()
-        
+
     max_memory = f'{args.max_memory_MB}MB'
     max_memory = {i: max_memory for i in range(n_gpus)}
     device_map = "auto"
@@ -343,7 +355,7 @@ def get_accelerate_model(args, checkpoint_dir):
             print('='*80)
             print('Your GPU supports bfloat16, you can accelerate training with the argument --bf16')
             print('='*80)
-            
+
     if compute_dtype == torch.float16 and (is_ipex_available() and torch.xpu.is_available()):
         compute_dtype = torch.bfloat16
         print('Intel XPU does not support float16 yet, so switching to bfloat16')
@@ -375,10 +387,10 @@ def get_accelerate_model(args, checkpoint_dir):
         # Note that these are present in the vocabulary.
         # Note also that `model.config.pad_token_id` is 0 which corresponds to `<unk>` token.
         print('Adding special tokens.')
-        
+
         if model.config.pad_token_id == None:
             model.config.pad_token_id = 0
-            
+
         tokenizer.add_special_tokens({
                 "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
                 "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
@@ -386,7 +398,7 @@ def get_accelerate_model(args, checkpoint_dir):
                     model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id
                 ),
         })
-    
+
     if not args.full_finetune:
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
 
@@ -400,6 +412,8 @@ def get_accelerate_model(args, checkpoint_dir):
         config = HRQLoraConfig(
             codebook_size=args.codebook_size,
             codebook_layers=args.codebook_layers,
+            quant_ema_decay=args.quant_ema_decay,
+            codebook_start=args.codebook_start,
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
             target_modules=modules,
@@ -449,7 +463,7 @@ def smart_tokenizer_and_embedding_resize(
     """
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
     model.resize_token_embeddings(len(tokenizer))
-    
+
     if num_new_tokens > 0:
         input_embeddings_data = model.get_input_embeddings().weight.data
         output_embeddings_data = model.get_output_embeddings().weight.data
@@ -712,7 +726,7 @@ def train():
         **vars(model_args), **vars(data_args), **vars(training_args)
     )
     print(args)
-    
+
     checkpoint_dir, completed_training = get_last_checkpoint(args.output_dir)
     if completed_training:
         print('Detected that training was already completed!')
@@ -724,7 +738,7 @@ def train():
     set_seed(args.seed)
 
     data_module = make_data_module(tokenizer=tokenizer, args=args)
-    
+
     trainer = Seq2SeqTrainer(
         model=model,
         tokenizer=tokenizer,
@@ -796,6 +810,16 @@ def train():
                 trainer.log(results)
                 trainer.data_collator.source_max_len = source_max_len
 
+        class EvaluateFirstStepCallback(transformers.TrainerCallback):
+            def on_step_begin(self, args, state, control, **kwargs):
+                if state.global_step == 0:
+                    print("we should not be here")
+                    control.should_evaluate = True
+
+        if args.eval_step_zero:
+            print(f'args eval 0 {args.eval_step_zero}, type {type(args.eval_step_zero)}')
+            print('Evaluating at step 0. callback added')
+            trainer.add_callback(EvaluateFirstStepCallback())
         trainer.add_callback(MMLUEvalCallback)
 
     # Verifying the datatypes and parameter counts before training.

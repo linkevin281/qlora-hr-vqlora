@@ -8,13 +8,16 @@ codebook_layers=3
 extra_name=""
 annotation=""
 wandb=""
+quant_ema_decay=0.99
+codebook_start=0
+eval_step_zero=0
 
-qlora=/thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/HR-VQLoRA-Quantized-Hierarchical-Residual-Learning-of-Low-Rank-Adaptors/submodules/qlora-hr-vqlora/qlora.py
+qlora=/thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/Workspaces/multimodal4_codebook_output/qlora-hr-vqlora/qlora.py
 
-usage() { echo "Usage: $0 -g <gpu_no> -r <lora rank> -c <codebook size> -l <learning rate (og: 0.0002)> [-w <use wanddb> -n <no. codebook layers>] [-e <extra name>] [-a <annotation>]" 1>&2; exit 1; }
+usage() { echo "Usage: $0 -g <gpu_no> -r <lora rank> -c <codebook size> -l <learning rate (og: 0.0002)> [-w <use wanddb> -n <no. codebook layers> -d <quant ema decay> -e <extra name> -a <annotation> -s <codebook start step> -t <eval step zero>" 1>&2; exit 1; }
 
 ## if w flag is present, set wandb to true
-while getopts ":g:c:r:l:n:e:a:w:" o; do
+while getopts ":g:c:r:l:d:n:e:s:a:w:t:" o; do
     case "${o}" in
         g)
             gpu=${OPTARG}
@@ -40,6 +43,15 @@ while getopts ":g:c:r:l:n:e:a:w:" o; do
         w)
             wandb="--report_to wandb"
             ;;
+        d)
+            quant_ema_decay=${OPTARG}
+            ;;
+        s)
+            codebook_start=${OPTARG}
+            ;;
+        t)
+            eval_step_zero=1
+            ;;
         *)
             usage
             ;;
@@ -53,15 +65,18 @@ echo "learning_rate = ${learning_rate}"
 echo "codebook_layers = ${codebook_layers}"
 echo "annotation = ${annotation}"
 echo "Recording to wandb? = ${wandb}"
+echo "quant_ema_decay = ${quant_ema_decay}"
+echo "codebook_start = ${codebook_start}"
+echo "eval_step_zero = ${eval_step_zero}"
 
-if [ -z "${codebook_size}" ] || [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ]; then
+if [ -z "${codebook_size}" ] || [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
     usage
 fi
 
 if [ -z "${extra_name}" ]; then
-    name="r${lora_rank}_c${codebook_size}_l${learning_rate}_n${codebook_layers}"
+    name="r${lora_rank}_c${codebook_size}_l${learning_rate}_n${codebook_layers}_d${quant_ema_decay}_s${codebook_start}"
 else
-    name="r${lora_rank}_c${codebook_size}_l${learning_rate}_n${codebook_layers}_${extra_name}"
+    name="r${lora_rank}_c${codebook_size}_l${learning_rate}_n${codebook_layers}_d${quant_ema_decay}_s${codebook_start}_${extra_name}"
 fi
 
 echo "name = {$name}"
@@ -102,13 +117,16 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --target_max_len 512 \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 16 \
-    --max_steps 2400 \
+    --max_steps 1850 \
     --eval_steps 187 \
     --learning_rate $learning_rate \
     --adam_beta2 0.999 \
     --max_grad_norm 0.3 \
     --lora_dropout 0.1 \
     --weight_decay 0.0 \
+    --quant_ema_decay $quant_ema_decay \
+    --codebook_start $codebook_start \
+    --eval_step_zero $eval_step_zero \
     --seed 0 \
     $wandb \
     --run_name $name \
