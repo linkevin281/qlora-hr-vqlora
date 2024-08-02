@@ -37,7 +37,7 @@ import evaluate
 from peft import (
     prepare_model_for_kbit_training,
     LoraConfig,
-    HRQLoraConfig,
+    HRLoraConfig,
     get_peft_model,
     PeftModel
 )
@@ -314,6 +314,8 @@ def get_accelerate_model(args, checkpoint_dir):
         n_gpus = torch.cuda.device_count()
     if is_ipex_available() and torch.xpu.is_available():
         n_gpus = torch.xpu.device_count()
+    if torch.backends.mps.is_available():
+        n_gpus = torch.cuda.device_count()
 
     max_memory = f'{args.max_memory_MB}MB'
     max_memory = {i: max_memory for i in range(n_gpus)}
@@ -409,7 +411,7 @@ def get_accelerate_model(args, checkpoint_dir):
         # else:
         print(f'adding LoRA modules...')
         modules = find_all_linear_names(args, model)
-        config = HRQLoraConfig(
+        config = HRLoraConfig(
             codebook_size=args.codebook_size,
             codebook_layers=args.codebook_layers,
             quant_ema_decay=args.quant_ema_decay,
