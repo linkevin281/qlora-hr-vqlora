@@ -446,6 +446,13 @@ def print_trainable_parameters(args, model):
         if param.requires_grad:
             trainable_params += param.numel()
     if args.bits == 4: trainable_params /= 2
+
+    # HRLoRA
+    base_trainable_params = 79953920.0 # Params for huggyllama/llama-7b
+    if trainable_params > base_trainable_params*2:
+        print(f"WARNING: The number of trainable parameters is {trainable_params} which is more than twice the number of parameters in the base model {base_trainable_params}.")
+        print("THIS MAY INDICATE THAT THE MODEL IS NOT MORE EFFICIENT THAN QLORA.")
+
     print(
         f"trainable params: {trainable_params} || "
         f"all params: {all_param} || "
