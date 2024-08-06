@@ -181,7 +181,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         metadata={"help": "Lora R dimension."}
     )
     hr_lora_r: str = field(
-        default="64",
+        default="",
         metadata={"help": "Lora R array."}
     )
     quant_ema_decay: float = field(
@@ -403,9 +403,17 @@ def get_accelerate_model(args, checkpoint_dir):
         # else:
         print(f'adding LoRA modules...')
         modules = find_all_linear_names(args, model)
+
+        ## HRQLoRA
+        hr_lora_r = ""
+        if args.hr_lora_r:
+            hr_lora_r = [int(r) for r in args.hr_lora_r.split(',')]
+
+        print(f'HR LoRA R: {hr_lora_r}')
+
         config = HRLoraConfig(
             quant_ema_decay=args.quant_ema_decay,
-            hr_lora_r=args.hr_lora_r,
+            hr_lora_r=hr_lora_r,
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
             target_modules=modules,

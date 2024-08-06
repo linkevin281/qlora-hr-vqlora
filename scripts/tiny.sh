@@ -9,6 +9,7 @@ annotation=""
 wandb=""
 quant_ema_decay=0.99
 eval_step_zero=0
+hr_lora_r=""
 
 qlora=/thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/Workspaces/hierarchical-residuals/qlora-hr-vqlora/qlora.py
 
@@ -24,7 +25,7 @@ while getopts ":g:r:l:d:e:a:w:t:h:" o; do
             lora_rank=${OPTARG}
             ;;
         h)
-            hr_lora_rank=${OPTARG}
+            hr_lora_r=${OPTARG}
             ;;
         l)
             learning_rate=${OPTARG}
@@ -58,16 +59,16 @@ echo "Recording to wandb? = ${wandb}"
 echo "quant_ema_decay = ${quant_ema_decay}"
 echo "eval_step_zero = ${eval_step_zero}"
 echo "extra_name = ${extra_name}"
-echo "hr_lora_rank = ${hr_lora_rank}"
+echo "hr_lora_r = ${hr_lora_r}"
 
 if [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
     usage
 fi
 
 if [ -z "${extra_name}" ]; then
-    name="r${lora_rank}_l${learning_rate}_h${hr_lora_rank}"
+    name="r${lora_rank}_l${learning_rate}_h${hr_lora_r}"
 else
-    name="r${lora_rank}_l${learning_rate}_h${hr_lora_rank}_${extra_name}"
+    name="r${lora_rank}_l${learning_rate}_h${hr_lora_r}_${extra_name}"
 fi
 
 echo "name = {$name}"
@@ -116,7 +117,7 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --weight_decay 0.0 \
     --quant_ema_decay $quant_ema_decay \
     --eval_step_zero $eval_step_zero \
-    --hr_lora_rank $hr_lora_rank \
+    ${hr_lora_r:+--hr_lora_r $hr_lora_r} \
     --seed 0 \
     $wandb \
     --run_name $name \
