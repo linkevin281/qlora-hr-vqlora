@@ -180,21 +180,13 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         default=64,
         metadata={"help": "Lora R dimension."}
     )
-    codebook_size: int = field(
-        default=16,
-        metadata={"help": "Codebook Size"}
-    )
-    codebook_layers: int = field(
-        default=3,
-        metadata={"help": "Codebook Layers"}
+    layers: int = field(
+        default="",
+        metadata={"help": "A string of ranks for layers"}
     )
     quant_ema_decay: float = field(
         default=0.99,
         metadata={"help": "Quantization EMA decay."}
-    )
-    codebook_start: int = field(
-        default=0,
-        metadata={"help": "Codebook start step."}
     )
     eval_step_zero: int = field(
         default=0,
@@ -412,10 +404,8 @@ def get_accelerate_model(args, checkpoint_dir):
         print(f'adding LoRA modules...')
         modules = find_all_linear_names(args, model)
         config = HRLoraConfig(
-            codebook_size=args.codebook_size,
-            codebook_layers=args.codebook_layers,
             quant_ema_decay=args.quant_ema_decay,
-            codebook_start=args.codebook_start,
+            layers=args.layers,
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
             target_modules=modules,
