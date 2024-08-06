@@ -12,10 +12,10 @@ eval_step_zero=0
 
 qlora=/thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/Workspaces/hierarchical-residuals/qlora-hr-vqlora/qlora.py
 
-usage() { echo "Usage: $0 -g <gpu_no> -r <lora rank> -l <learning rate (og: 0.0002)> [-w <use wanddb> -n <arr layer ranks> -d <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
+usage() { echo "Usage: $0 -g <gpu_no> -r <lora rank array> -l <learning rate (og: 0.0002)> [-w <use wanddb> -h <hr lora rank csv> -d <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
 
 ## if w flag is present, set wandb to true
-while getopts ":g:r:l:d:n:e:a:w:t:" o; do
+while getopts ":g:r:l:d:e:a:w:t:h:" o; do
     case "${o}" in
         g)
             gpu=${OPTARG}
@@ -23,11 +23,11 @@ while getopts ":g:r:l:d:n:e:a:w:t:" o; do
         r)
             lora_rank=${OPTARG}
             ;;
+        h)
+            hr_lora_rank=${OPTARG}
+            ;;
         l)
             learning_rate=${OPTARG}
-            ;;
-        n)
-            layers=${OPTARG}
             ;;
         e)
             extra_name=${OPTARG}
@@ -53,20 +53,21 @@ shift $((OPTIND-1))
 
 echo "lora_rank = ${lora_rank}"
 echo "learning_rate = ${learning_rate}"
-echo "layers = ${layers}"
 echo "annotation = ${annotation}"
 echo "Recording to wandb? = ${wandb}"
 echo "quant_ema_decay = ${quant_ema_decay}"
 echo "eval_step_zero = ${eval_step_zero}"
+echo "extra_name = ${extra_name}"
+echo "hr_lora_rank = ${hr_lora_rank}"
 
-if [ -z "${layers}" ] || [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
+if [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
     usage
 fi
 
 if [ -z "${extra_name}" ]; then
-    name="r${lora_rank}_l${learning_rate}_n${layers}_d${quant_ema_decay}"
+    name="r${lora_rank}_l${learning_rate}_h${hr_lora_rank}"
 else
-    name="r${lora_rank}_l${learning_rate}_n${layers}_d${quant_ema_decay}_${extra_name}"
+    name="r${lora_rank}_l${learning_rate}_h${hr_lora_rank}_${extra_name}"
 fi
 
 echo "name = {$name}"
@@ -115,7 +116,7 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --weight_decay 0.0 \
     --quant_ema_decay $quant_ema_decay \
     --eval_step_zero $eval_step_zero \
-    --layers $layers \
+    --hr_lora_rank $hr_lora_rank \
     --seed 0 \
     $wandb \
     --run_name $name \
