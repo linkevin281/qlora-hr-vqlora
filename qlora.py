@@ -344,6 +344,11 @@ def get_accelerate_model(args, checkpoint_dir):
         trust_remote_code=args.trust_remote_code,
         use_auth_token=args.use_auth_token
     )
+    model_16 = AutoModelForCausalLM.from_pretrained(
+        args.model_name_or_path,
+        device_map=device_map,
+        torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32)),
+    )
     if compute_dtype == torch.float16 and args.bits == 4:
         if torch.cuda.is_bf16_supported():
             print('='*80)
@@ -356,8 +361,11 @@ def get_accelerate_model(args, checkpoint_dir):
 
     setattr(model, 'model_parallel', True)
     setattr(model, 'is_parallelizable', True)
+    setattr(model_16, 'model_parallel', True)
+    setattr(model_16, 'is_parallelizable', True)
 
     model.config.torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
+    model_16.config.torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
 
     # Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
@@ -375,6 +383,11 @@ def get_accelerate_model(args, checkpoint_dir):
             tokenizer=tokenizer,
             model=model,
         )
+        smart_tokenizer_and_embedding_resize(
+            special_tokens_dict=dict(pad_token=DEFAULT_PAD_TOKEN),
+            tokenizer=tokenizer,
+            model=model_16,
+        )
     if 'llama' in args.model_name_or_path or isinstance(tokenizer, LlamaTokenizer):
         # LLaMA tokenizer may not have correct special tokens set.
         # Check and add them if missing to prevent them from being parsed into different tokens.
@@ -384,6 +397,7 @@ def get_accelerate_model(args, checkpoint_dir):
 
         if model.config.pad_token_id == None:
             model.config.pad_token_id = 0
+            model_16.config.pad_token_id = 0
 
         tokenizer.add_special_tokens({
                 "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
@@ -395,6 +409,7 @@ def get_accelerate_model(args, checkpoint_dir):
 
     if not args.full_finetune:
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.gradient_checkpointing)
+        model_16 = prepare_model_for_kbit_training(model_16, use_gradient_checkpointing=args.gradient_checkpointing)
 
     if not args.full_finetune:
         # if checkpoint_dir is not None:
@@ -427,13 +442,13 @@ def get_accelerate_model(args, checkpoint_dir):
         if isinstance(module, LoraLayer):
             if args.bf16:
                 module = module.to(torch.bfloat16)
-        if 'norm' in name:
+        if 'norm' in name: ## Note that QLoRA targets based off this name
             module = module.to(torch.float32)
-        if 'lm_head' in name or 'embed_tokens' in name:
+        if 'lm_head' in name or 'embed_tokens' in name: ## Note that QLoRA targets based off this name
             if hasattr(module, 'weight'):
                 if args.bf16 and module.weight.dtype == torch.float32:
                     module = module.to(torch.bfloat16)
-    return model, tokenizer
+    return model, model_16, tokenizer
 
 def print_trainable_parameters(args, model):
     """
@@ -738,7 +753,7 @@ def train():
     if completed_training:
         print('Detected that training was already completed!')
 
-    model, tokenizer = get_accelerate_model(args, checkpoint_dir)
+    model, model_16, tokenizer = get_accelerate_model(args, checkpoint_dir)
 
     model.config.use_cache = False
     print('loaded model')
@@ -748,6 +763,7 @@ def train():
 
     trainer = Seq2SeqTrainer(
         model=model,
+        original_model=model_16,
         tokenizer=tokenizer,
         args=training_args,
         **{k:v for k,v in data_module.items() if k != 'predict_dataset'},
