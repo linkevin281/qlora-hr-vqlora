@@ -1,7 +1,7 @@
 #!/bin/bash
 
 gpu=""
-lora_rank=""
+lora_rank="64"
 learning_rate=""
 layers=""
 extra_name=""
@@ -10,19 +10,17 @@ wandb=""
 quant_ema_decay=0.99
 eval_step_zero=0
 hr_lora_r=""
+model="huggyllama/llama-7b"
+dataset="oasst1"
 
-qlora=/thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/Workspaces/hierarchical-residuals/qlora-hr-vqlora/qlora.py
-
-usage() { echo "Usage: $0 -g <gpu_no> -r <lora rank array> -l <learning rate (og: 0.0002)> [-w <use wanddb> -h <hr lora rank csv> -d <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
+qlora="[FILL IN]"
+usage() { echo "Usage: $0 -g <gpu_no> -h <hr lora rank csv> -l <learning rate (og: 0.0002)> [-m <model> -d <dataset> -w <use wanddb> -q <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
 
 ## if w flag is present, set wandb to true
-while getopts ":g:r:l:d:e:a:w:t:h:" o; do
+while getopts ":g:h:l:e:a:w:d:t:m:d:q:" o; do
     case "${o}" in
         g)
             gpu=${OPTARG}
-            ;;
-        r)
-            lora_rank=${OPTARG}
             ;;
         h)
             hr_lora_r=${OPTARG}
@@ -39,11 +37,17 @@ while getopts ":g:r:l:d:e:a:w:t:h:" o; do
         w)
             wandb="--report_to wandb"
             ;;
-        d)
+        q)
             quant_ema_decay=${OPTARG}
             ;;
         t)
             eval_step_zero=1
+            ;;
+        m)
+            model=${OPTARG}
+            ;;
+        d)
+            dataset=${OPTARG}
             ;;
         *)
             usage
@@ -60,22 +64,25 @@ echo "quant_ema_decay = ${quant_ema_decay}"
 echo "eval_step_zero = ${eval_step_zero}"
 echo "extra_name = ${extra_name}"
 echo "hr_lora_r = ${hr_lora_r}"
+echo "model = ${model}"
+echo "dataset = ${dataset}"
 
-if [ -z "${lora_rank}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
+if [ -z "${hr_lora_r}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
     usage
 fi
 
 if [ -z "${extra_name}" ]; then
-    name="r${lora_rank}_l${learning_rate}_h${hr_lora_r}"
+    name="${model}_${dataset}_l${learning_rate}_${hr_lora_r}"
 else
-    name="r${lora_rank}_l${learning_rate}_h${hr_lora_r}_${extra_name}"
+    name="${model}_${dataset}_l${learning_rate}_${hr_lora_r}_${extra_name}"
 fi
 
 echo "name = {$name}"
+export WANDB_API_KEY="[FILL IN]"
 
 CUDA_VISIBLE_DEVICES=$gpu python $qlora \
-    --model_name_or_path huggyllama/llama-7b \
-    --output_dir /thayerfs/home/f004h3t/Workspaces/multi-modal-generative-ai/storage/real_runs/$name \
+    --model_name_or_path $model \
+    --output_dir "[FILL IN]"/$name \
     --logging_steps 1 \
     --save_strategy steps \
     --data_seed 42 \
@@ -103,7 +110,7 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --warmup_ratio 0.03 \
     --lr_scheduler_type constant \
     --gradient_checkpointing \
-    --dataset oasst1 \
+    --dataset $dataset \
     --source_max_len 16 \
     --target_max_len 512 \
     --per_device_train_batch_size 1 \
