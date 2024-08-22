@@ -120,7 +120,7 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --learning_rate $learning_rate \
     --adam_beta2 0.999 \
     --max_grad_norm 0.3 \
-    --lora_dropout 0.1 \
+    --lora_dropout 0.05 \
     --weight_decay 0.0 \
     --quant_ema_decay $quant_ema_decay \
     --eval_step_zero $eval_step_zero \
@@ -129,4 +129,5 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     $wandb \
     --run_name $name \
     --gpu $gpu \
-    --annotation $annotation
+    --annotation $annotation \
+    --use_auth_token True
