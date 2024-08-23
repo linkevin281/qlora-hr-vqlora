@@ -12,12 +12,14 @@ eval_step_zero=0
 hr_lora_r=""
 model="huggyllama/llama-7b"
 dataset="oasst1"
+steps=0
 
 qlora="[FILL IN]"
-usage() { echo "Usage: $0 -g <gpu_no> -h <hr lora rank csv> -l <learning rate (og: 0.0002)> [-m <model> -d <dataset> -w <use wanddb> -q <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
+
+usage() { echo "Usage: $0 -g <gpu_no> -h <hr lora rank csv> -m <model> -d <dataset> -s <steps>[-w <use wanddb> -l <learning rate (og: 0.0002)> -q <quant ema decay> -e <extra name> -a <annotation> -t <eval step zero>" 1>&2; exit 1; }
 
 ## if w flag is present, set wandb to true
-while getopts ":g:h:l:e:a:w:d:t:m:d:q:" o; do
+while getopts ":g:h:l:e:a:w:d:t:m:d:q:s:" o; do
     case "${o}" in
         g)
             gpu=${OPTARG}
@@ -49,6 +51,9 @@ while getopts ":g:h:l:e:a:w:d:t:m:d:q:" o; do
         d)
             dataset=${OPTARG}
             ;;
+        s)
+            steps=${OPTARG}
+            ;;
         *)
             usage
             ;;
@@ -66,8 +71,9 @@ echo "extra_name = ${extra_name}"
 echo "hr_lora_r = ${hr_lora_r}"
 echo "model = ${model}"
 echo "dataset = ${dataset}"
+echo "steps = ${steps}"
 
-if [ -z "${hr_lora_r}" ] || [ -z "${learning_rate}" ] || [ -z "${gpu}" ]; then
+if [ -z "${hr_lora_r}" ] || [ -z "${gpu}" ] || [ -z "${steps}" ] || [ -z "${model}" ] || [ -z "${dataset}" ]; then
     usage
 fi
 
@@ -115,7 +121,7 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     --target_max_len 512 \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 16 \
-    --max_steps 1850 \
+    --max_steps $steps \
     --eval_steps 187 \
     --learning_rate $learning_rate \
     --adam_beta2 0.999 \
