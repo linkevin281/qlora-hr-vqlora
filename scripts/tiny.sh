@@ -25,7 +25,7 @@ qlora="[FILL IN]"
 usage() { echo "Usage: $0 -g <gpu_no> -h <hr lora rank csv> -m <model> -d <dataset> -s <steps>[-w <use wanddb> -v <eval_steps> -a <save_steps> -r <dropout> -l <learning rate (og: 0.0002)> -q <quant ema decay> -e <extra name> -t <eval step zero>" 1>&2; exit 1; }
 
 ## if w flag is present, set wandb to true
-while getopts ":g:h:l:e:a:w:d:t:m:d:q:s:v:a:r" o; do
+while getopts ":g:h:l:e:a:w:d:t:m:d:q:s:v:a:r:" o; do
     case "${o}" in
         g)
             gpu=${OPTARG}
@@ -83,6 +83,9 @@ echo "hr_lora_r = ${hr_lora_r}"
 echo "model = ${model}"
 echo "dataset = ${dataset}"
 echo "steps = ${steps}"
+echo "eval_steps = ${eval_steps}"
+echo "save_steps = ${save_steps}"
+echo "dropout = ${dropout}"
 
 if [ -z "${hr_lora_r}" ] || [ -z "${gpu}" ] || [ -z "${steps}" ] || [ -z "${model}" ] || [ -z "${dataset}" ]; then
     usage
