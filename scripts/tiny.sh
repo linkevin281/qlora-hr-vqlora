@@ -93,11 +93,15 @@ fi
 
 if [ -z "${extra_name}" ]; then
     name="${model}_${dataset}_l${learning_rate}_${hr_lora_r}"
+    hf_name="${model#*/}_${dataset}_l${learning_rate}_${hr_lora_r//,/\-}"
 else
     name="${model}_${dataset}_l${learning_rate}_${hr_lora_r}_${extra_name}"
+    hf_name="${model#*/}_${dataset}_l${learning_rate}_${hr_lora_r//,/\-}_${extra_name}"
 fi
 
 echo "name = {$name}"
+echo "hf_name = ${hf_name}"
+
 export WANDB_API_KEY="[FILL IN]"
 
 CUDA_VISIBLE_DEVICES=$gpu python $qlora \
@@ -149,4 +153,6 @@ CUDA_VISIBLE_DEVICES=$gpu python $qlora \
     $wandb \
     --run_name $name \
     --gpu $gpu \
-    --use_auth_token True
+    --use_auth_token True \
+    --push_to_hub True \
+    --push_to_hub_model_id $hf_name \

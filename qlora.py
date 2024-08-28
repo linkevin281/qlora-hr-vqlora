@@ -885,5 +885,9 @@ def train():
         with open(os.path.join(args.output_dir, "metrics.json"), "w") as fout:
             fout.write(json.dumps(all_metrics))
 
+    if args.push_to_hub:
+        print("Pushing to HF Hub")
+        trainer.push_to_hub()
+
 if __name__ == "__main__":
     train()
