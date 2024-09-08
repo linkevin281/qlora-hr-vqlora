@@ -598,6 +598,7 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
         - hh-rlhf (Anthropic), 160800 examples
         - longform, 23.7k examples
         - oasst1 (OpenAssistant) primary message tree only, 9,846 examples
+        - open-orca (Flan2 but clean basically) 200k ish.
 
     Coming soon:
         - unnatural instructions core, 66010 examples
@@ -624,6 +625,8 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             return load_dataset("akoksal/LongForm")
         elif dataset_name == 'oasst1':
             return load_dataset("timdettmers/openassistant-guanaco")
+        elif dataset_name == 'open-orca':
+            return load_dataset("Open-Orca/OpenOrca")
         elif dataset_name == 'vicuna':
             raise NotImplementedError("Vicuna data was not released.")
         else:
@@ -660,6 +663,11 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             dataset = dataset.map(lambda x: {
                 'input': '',
                 'output': x['text'],
+            })
+        elif dataset_format == 'open-orca' or (dataset_format is None and args.dataset == 'open-orca'):
+            dataset = dataset.map(lambda x: {
+                'input': x['question'],
+                'output': x['response'],
             })
         elif dataset_format == 'input-output':
             # leave as is
@@ -821,7 +829,6 @@ def train():
         class EvaluateFirstStepCallback(transformers.TrainerCallback):
             def on_step_begin(self, args, state, control, **kwargs):
                 if state.global_step == 0:
-                    print("we should not be here")
                     control.should_evaluate = True
 
         if args.eval_step_zero:
